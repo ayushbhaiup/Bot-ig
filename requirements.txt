@@ -1,5 +1,5 @@
 Flask==2.3.3
-instagrapi==1.17.2
+instagrapi==2.0.0
 gunicorn==21.2.0
 Werkzeug==2.3.7
 pydantic==1.10.7
