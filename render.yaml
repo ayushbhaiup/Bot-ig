@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: ig
+    name: Bot ig
     env: python
     plan: free
 
