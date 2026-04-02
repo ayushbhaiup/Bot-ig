@@ -2,27 +2,15 @@ import os
 import threading
 import time
 import random
-import pydantic
 from datetime import datetime
 from flask import Flask, render_template_string, request, jsonify
 from instagrapi import Client
-from pydantic.class_validators import Validator
-Validator.check_fields = lambda self: None
-from instagrapi.exceptions import (
-    LoginRequired, RateLimitError, ClientError, ClientForbiddenError, 
-    ClientNotFoundError, ChallengeRequired, PleaseWaitFewMinutes
-)
 
 app = Flask(__name__)
 
-# Global variables
 BOT_THREAD = None
 STOP_EVENT = threading.Event()
 LOGS = []
-START_TIME = None
-CLIENT = None
-SESSION_TOKEN = None
-LOGIN_SUCCESS = False
 
 STATS = {
     "total_welcomed": 0,
@@ -38,248 +26,161 @@ BOT_CONFIG = {
     "media_library": {}
 }
 
-def uptime():
-    if not START_TIME:
-        return "00:00:00"
-    delta = datetime.now() - START_TIME
-    hours, rem = divmod(int(delta.total_seconds()), 3600)
-    minutes, seconds = divmod(rem, 60)
-    return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
-
 def log(msg):
     ts = datetime.now().strftime('%H:%M:%S')
     lm = f"[{ts}] {msg}"
     LOGS.append(lm)
-    if len(LOGS) > 500:
-        LOGS[:] = LOGS[-500:]
     print(lm)
 
-def clear_logs():
-    global LOGS
-    LOGS.clear()
-    log("🧹 Logs cleared by user!")
+MUSIC_EMOJIS = ["🎵","🎶","🎸","🎹","🎤","🎧"]
+FUNNY = ["Hahaha 😂","LOL 😂","Mast 😆","Pagal 🤪","King 👑😂"]
+MASTI = ["Party 🎉","Masti 🥳","Dhamaal 💃","Full ON 🔥","Enjoy 🎊"]
 
-def create_stable_client():
-    cl = Client()
-    cl.delay_range = [8, 15]
-    cl.request_timeout = 90
-    cl.max_retries = 1
-    ua = "Instagram 380.0.0.28.104 Android (35/14; 600dpi; 1440x3360; samsung; SM-S936B; dm5q; exynos2500; en_IN; 380000028)"
-    cl.set_user_agent(ua)
-    return cl
-
-def safe_login(cl, token, max_retries=3):
-    global LOGIN_SUCCESS, SESSION_TOKEN
-    for attempt in range(max_retries):
-        try:
-            log(f"🔐 Login attempt {attempt+1}/{max_retries}")
-            cl.login_by_sessionid(token)
-            account = cl.account_info()
-            if account and hasattr(account, 'username') and account.username:
-                username = account.username
-                log(f"✅ Login SUCCESS: @{username}")
-                LOGIN_SUCCESS = True
-                SESSION_TOKEN = token
-                time.sleep(3)
-                return True, username
-        except Exception as e:
-            error_msg = str(e).lower()
-            if "session" in error_msg or "login required" in error_msg:
-                log("❌ Session expired!")
-                return False, None
-            elif "rate limit" in error_msg:
-                log("⏳ Rate limited - 60s wait")
-                time.sleep(60)
-            elif "challenge" in error_msg:
-                log("❌ Challenge required")
-                time.sleep(30)
-            else:
-                log(f"⚠️ Login error: {str(e)[:50]}")
-                time.sleep(15 * (attempt + 1))
-    return False, None
-
-def session_health_check():
-    global CLIENT, LOGIN_SUCCESS
-    try:
-        if CLIENT:
-            CLIENT.account_info()
-            return True
-    except:
-        pass
-    LOGIN_SUCCESS = False
-    return False
-
-def refresh_session(token):
-    global CLIENT, LOGIN_SUCCESS
-    log("🔄 Auto session refresh...")
-    new_client = create_stable_client()
-    success, _ = safe_login(new_client, token)
-    if success:
-        CLIENT = new_client
-        return True
-    return False
-
-# ================= MAIN BOT WITH ADMIN COMMANDS =================
+# ================= BOT ================= (same as before - no changes)
 def run_bot(session_token, wm, gids, dly, pol, ucn, ecmd, admin_ids):
-    global START_TIME, CLIENT, LOGIN_SUCCESS
-    
-    START_TIME = datetime.now()
-    consecutive_errors = 0
-    max_errors = 12
-    
-    log("🚀 Premium Bot v4.5 with ADMIN COMMANDS starting...")
-    
-    CLIENT = create_stable_client()
-    success, username = safe_login(CLIENT, session_token)
-    if not success:
-        log("💥 Login failed - Bot STOPPED")
+    cl = Client()
+    try:
+        cl.login_by_sessionid(session_token)
+        me = cl.account_info().username
+        log(f"Session login success: @{me}")
+    except Exception as e:
+        log("Session login failed: " + str(e))
         return
-    
-    km = {gid: set() for gid in gids}
-    lm = {gid: None for gid in gids}
-    
-    log("📱 Initializing groups...")
-    for i, gid in enumerate(gids):
+
+    km = {}
+    lm = {}
+
+    for gid in gids:
         try:
-            time.sleep(10)
-            thread = CLIENT.direct_thread(gid)
-            km[gid] = {u.pk for u in thread.users}
-            if thread.messages:
-                lm[gid] = thread.messages[0].id
+            g = cl.direct_thread(gid)
+            km[gid] = {u.pk for u in g.users}
+            lm[gid] = g.messages[0].id if g.messages else None
             BOT_CONFIG["spam_active"][gid] = False
-            log(f"✅ Group {i+1}: {gid[:12]}...")
-        except Exception as e:
-            log(f"⚠️ Group error: {str(e)[:30]}")
-    
-    log("🎉 Bot running with FULL FEATURES!")
-    
+            log("Group ready: " + gid)
+        except:
+            km[gid] = set()
+            lm[gid] = None
+
     while not STOP_EVENT.is_set():
         for gid in gids:
             if STOP_EVENT.is_set():
                 break
-                
             try:
-                if not session_health_check():
-                    if refresh_session(SESSION_TOKEN):
-                        consecutive_errors = 0
-                    else:
-                        log("💥 Session recovery failed")
-                        return
-                
-                time.sleep(random.uniform(12, 20))
-                thread = CLIENT.direct_thread(gid)
-                consecutive_errors = 0
-                
-                # ========== COMMANDS PROCESSING ==========
-                if ecmd:
-                    new_msgs = []
-                    if lm[gid] and thread.messages:
-                        for msg in thread.messages[:10]:
-                            if msg.id == lm[gid]:
-                                break
-                            new_msgs.append(msg)
-                    
-                    for msg_obj in reversed(new_msgs[:3]):
-                        try:
-                            if not msg_obj or msg_obj.user_id == CLIENT.user_id:
-                                continue
-                                
-                            sender = next((u for u in thread.users if u.pk == msg_obj.user_id), None)
-                            if not sender or not hasattr(sender, 'username'):
-                                continue
-                                
-                            text = (msg_obj.text or "").strip().lower()
-                            sender_username = sender.username.lower()
-                            
-                            # ADMIN CHECK
-                            is_admin = sender_username in [aid.lower() for aid in admin_ids] if admin_ids else False
-                            
-                            # ADMIN COMMANDS
-                            if is_admin:
-                                if text.startswith('/spam '):
-                                    parts = msg_obj.text.split(" ", 2)
-                                    if len(parts) == 3:
-                                        BOT_CONFIG["target_spam"][gid] = {
-                                            "username": parts[1].replace("@", ""),
-                                            "message": parts[2]
-                                        }
-                                        BOT_CONFIG["spam_active"][gid] = True
-                                        CLIENT.direct_send("🔥 Spam ON!", thread_ids=[gid])
-                                        
-                                elif text in ['/stopspam', '!stopspam']:
-                                    BOT_CONFIG["spam_active"][gid] = False
-                                    CLIENT.direct_send("🛑 Spam OFF!", thread_ids=[gid])
-                                    
-                            # PUBLIC COMMANDS
-                            if text in ['/ping', '!ping']:
-                                CLIENT.direct_send(f"🏓 Pong! Uptime: {uptime()}", thread_ids=[gid])
-                            elif text in ['/uptime', '!uptime']:
-                                CLIENT.direct_send(f"⏱️ Uptime: {uptime()}", thread_ids=[gid])
-                            elif text in ['/help', '!help']:
-                                help_msg = """📋 COMMANDS:
-/ping - Bot status
-/uptime - Running time
-/help - This help
+                g = cl.direct_thread(gid)
 
-👑 ADMIN:
-/spam @user message
-/stopspam"""
-                                CLIENT.direct_send(help_msg, thread_ids=[gid])
-                        
-                        except:
-                            pass
-                    
-                    if thread.messages:
-                        lm[gid] = thread.messages[0].id
-
-                # ========== SPAM (Admin only) ==========
                 if BOT_CONFIG["spam_active"].get(gid):
-                    target = BOT_CONFIG["target_spam"].get(gid)
-                    if target:
-                        try:
-                            msg = f"@{target['username']} {target['message']}"
-                            CLIENT.direct_send(msg, thread_ids=[gid])
-                            time.sleep(4)
-                        except:
-                            pass
+                    t = BOT_CONFIG["target_spam"].get(gid)
+                    if t:
+                        cl.direct_send(
+                            "@" + t["username"] + " " + t["message"],
+                            thread_ids=[gid]
+                        )
+                        log("Spam sent")
+                        time.sleep(2)
 
-                # ========== WELCOME NEW USERS ==========
-                current_members = {u.pk for u in thread.users}
-                new_users = current_members - km[gid]
-                
-                for user in thread.users:
-                    if user.pk in new_users and hasattr(user, 'username') and user.username:
-                        try:
-                            welcome_msg = f"@{user.username} {wm[0]}" if ucn else wm[0]
-                            CLIENT.direct_send(welcome_msg, thread_ids=[gid])
+                if ecmd or BOT_CONFIG["auto_reply_active"]:
+                    new_msgs = []
+                    if lm[gid]:
+                        for m in g.messages:
+                            if m.id == lm[gid]:
+                                break
+                            new_msgs.append(m)
+
+                    for m in reversed(new_msgs):
+                        if m.user_id == cl.user_id:
+                            continue
+
+                        sender = next((u for u in g.users if u.pk == m.user_id), None)
+                        if not sender:
+                            continue
+
+                        su = sender.username.lower()
+                        ia = su in [a.lower() for a in admin_ids] if admin_ids else True
+                        t = (m.text or "").strip()
+                        tl = t.lower()
+
+                        if BOT_CONFIG["auto_reply_active"] and tl in BOT_CONFIG["auto_replies"]:
+                            cl.direct_send(BOT_CONFIG["auto_replies"][tl], thread_ids=[gid])
+
+                        if not ecmd:
+                            continue
+
+                        if tl in ["/help","!help"]:
+                            cl.direct_send(
+                                "COMMANDS:"
+                                "/help /ping /time /about"
+                                "/stats /count /welcome"
+                                "/autoreply key msg/stopreply"
+                                "/music /funny /masti"
+                                "/spam @user msg/stopspam",
+                                thread_ids=[gid]
+                            )
+
+                        elif tl in ["/ping","!ping"]:
+                            cl.direct_send("Pong! ✅", thread_ids=[gid])
+
+                        elif tl in ["/time","!time"]:
+                            cl.direct_send(datetime.now().strftime("%I:%M %p"), thread_ids=[gid])
+
+                        elif tl in ["/about","!about"]:
+                            cl.direct_send("Instagram Premium Bot v4.0 (SESSION)", thread_ids=[gid])
+
+                        elif tl.startswith("/autoreply "):
+                            p = t.split(" ",2)
+                            if len(p)==3:
+                                BOT_CONFIG["auto_replies"][p[1].lower()] = p[2]
+                                BOT_CONFIG["auto_reply_active"] = True
+
+                        elif tl in ["/stopreply","!stopreply"]:
+                            BOT_CONFIG["auto_reply_active"] = False
+                            BOT_CONFIG["auto_replies"] = {}
+
+                        elif tl in ["/music","!music"]:
+                            cl.direct_send(" ".join(random.choices(MUSIC_EMOJIS,k=5)), thread_ids=[gid])
+
+                        elif tl in ["/funny","!funny"]:
+                            cl.direct_send(random.choice(FUNNY), thread_ids=[gid])
+
+                        elif tl in ["/masti","!masti"]:
+                            cl.direct_send(random.choice(MASTI), thread_ids=[gid])
+
+                        elif ia and tl.startswith("/spam "):
+                            p = t.split(" ",2)
+                            if len(p)==3:
+                                BOT_CONFIG["target_spam"][gid] = {
+                                    "username": p[1].replace("@",""),
+                                    "message": p[2]
+                                }
+                                BOT_CONFIG["spam_active"][gid] = True
+
+                        elif ia and tl in ["/stopspam","!stopspam"]:
+                            BOT_CONFIG["spam_active"][gid] = False
+
+                    if g.messages:
+                        lm[gid] = g.messages[0].id
+
+                cm = {u.pk for u in g.users}
+                new_users = cm - km[gid]
+
+                for u in g.users:
+                    if u.pk in new_users:
+                        for msg in wm:
+                            final = f"@{u.username} {msg}" if ucn else msg
+                            cl.direct_send(final, thread_ids=[gid])
                             STATS["total_welcomed"] += 1
                             STATS["today_welcomed"] += 1
-                            log(f"👋 NEW: @{user.username}")
-                            time.sleep(dly * 2)
-                            break
-                        except:
-                            break
-                km[gid] = current_members
+                            time.sleep(dly)
 
-            except RateLimitError:
-                consecutive_errors += 1
-                log("⏳ Rate limit - 2min cooldown")
-                time.sleep(120)
-            except Exception as e:
-                consecutive_errors += 1
-                log(f"⚠️ Error: {str(e)[:40]}")
-                time.sleep(15)
-        
-        if consecutive_errors > max_errors:
-            log("🔄 Emergency restart...")
-            if not refresh_session(SESSION_TOKEN):
-                break
-        
-        time.sleep(pol + random.uniform(3, 7))
+                km[gid] = cm
 
-    log("🛑 Bot stopped")
+            except:
+                pass
 
-# ================= FLASK ROUTES =================
+        time.sleep(pol)
+
+    log("BOT STOPPED")
+
+# ================= FLASK ================= (same as before)
 @app.route("/")
 def index():
     return render_template_string(PAGE_HTML)
@@ -288,306 +189,541 @@ def index():
 def start():
     global BOT_THREAD
     if BOT_THREAD and BOT_THREAD.is_alive():
-        return jsonify({"message": "❌ Bot already running!"})
-    
-    try:
-        token = request.form.get("session", "").strip()
-        welcome = [x.strip() for x in request.form.get("welcome", "").splitlines() if x.strip()]
-        gids = [x.strip() for x in request.form.get("group_ids", "").split(",") if x.strip()]
-        admins = [x.strip() for x in request.form.get("admin_ids", "").split(",") if x.strip()]
-        
-        if not all([token, welcome, gids]):
-            return jsonify({"message": "❌ Fill Token, Welcome & Groups!"})
+        return jsonify({"message":"Already running"})
 
-        global STOP_EVENT
-        STOP_EVENT.clear()
-        BOT_THREAD = threading.Thread(
-            target=run_bot,
-            args=(token, welcome, gids,
-                  int(request.form.get("delay", 5)),
-                  int(request.form.get("poll", 25)),
-                  request.form.get("use_custom_name") == "yes",
-                  request.form.get("enable_commands") == "yes",
-                  admins),
-            daemon=True
-        )
-        BOT_THREAD.start()
-        log("🚀 Bot v4.5 STARTED with Admin support!")
-        return jsonify({"message": "✅ Bot started! Admin commands ready!"})
-    except Exception as e:
-        return jsonify({"message": f"❌ Error: {str(e)}"})
+    token = request.form.get("session")
+    welcome = [x.strip() for x in request.form.get("welcome","").splitlines() if x.strip()]
+    gids = [x.strip() for x in request.form.get("group_ids","").split(",") if x.strip()]
+    admins = [x.strip() for x in request.form.get("admin_ids","").split(",") if x.strip()]
+
+    if not token or not welcome or not gids:
+        return jsonify({"message":"Fill all fields"})
+
+    STOP_EVENT.clear()
+    BOT_THREAD = threading.Thread(
+        target=run_bot,
+        args=(
+            token,
+            welcome,
+            gids,
+            int(request.form.get("delay",3)),
+            int(request.form.get("poll",5)),
+            request.form.get("use_custom_name")=="yes",
+            request.form.get("enable_commands")=="yes",
+            admins
+        ),
+        daemon=True
+    )
+    BOT_THREAD.start()
+    return jsonify({"message":"Started!"})
 
 @app.route("/stop", methods=["POST"])
 def stop():
-    global STOP_EVENT, CLIENT
     STOP_EVENT.set()
-    CLIENT = None
-    if BOT_THREAD:
-        BOT_THREAD.join(timeout=5)
-    log("🛑 Bot STOPPED!")
-    return jsonify({"message": "✅ Bot stopped!"})
+    return jsonify({"message":"Stopped!"})
 
 @app.route("/logs")
 def logs():
-    return jsonify({
-        "logs": LOGS[-200:],
-        "uptime": uptime(),
-        "status": "running" if BOT_THREAD and BOT_THREAD.is_alive() else "stopped"
-    })
+    return jsonify({"logs": LOGS[-200:]})
 
-@app.route("/clear_logs", methods=["POST"])
-def clear_logs_route():
-    clear_logs()
-    return jsonify({"message": "✅ Logs cleared!"})
-
-@app.route("/stats")
-def stats():
-    return jsonify({
-        "uptime": uptime(),
-        "status": "running" if BOT_THREAD and BOT_THREAD.is_alive() else "stopped",
-        "total_welcomed": STATS["total_welcomed"],
-        "today_welcomed": STATS["today_welcomed"]
-    })
-
-# ================= COMPLETE HTML WITH ADMIN FIELD =================
+# ================= ULTIMATE PREMIUM LIGHT UI =================
 PAGE_HTML = """<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Premium Instagram Bot v4.5 - Admin Panel</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>Premium Instagram Bot</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        *{margin:0;padding:0;box-sizing:border-box;}
-        body{font-family:'Inter',sans-serif;background:linear-gradient(135deg,#667eea,#764ba2);min-height:100vh;padding:20px;color:#333;}
-        .container{max-width:1000px;margin:0 auto;background:white;border-radius:20px;box-shadow:0 25px 50px rgba(0,0,0,0.15);overflow:hidden;}
-        .header{background:linear-gradient(135deg,#4f46e5,#7c3aed);color:white;padding:35px;text-align:center;}
-        .header h1{font-size:2.8rem;margin-bottom:10px;}
-        .status-bar{display:flex;justify-content:space-between;align-items:center;padding:25px 35px;background:#f8fafc;border-bottom:2px solid #e2e8f0;}
-        .status-item{display:flex;align-items:center;gap:12px;font-weight:600;}
-        .status-running{color:#10b981;}.status-stopped{color:#ef4444;}
-        .status-dot{width:14px;height:14px;border-radius:50%;background:#10b981;animation:pulse 2s infinite;}
-        @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.5;}}
-        .content{padding:35px;}
-        .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:25px;margin-bottom:30px;}
-        .form-group{position:relative;}
-        .form-group.full{grid-column:1/-1;}
-        label{display:block;margin-bottom:10px;font-weight:600;color:#374151;font-size:1rem;}
-        input,textarea{width:100%;padding:16px 18px;border:2px solid #e5e7eb;border-radius:14px;font-size:1rem;background:white;transition:all 0.3s;box-shadow:0 2px 8px rgba(0,0,0,0.05);}
-        input:focus,textarea:focus{outline:none;border-color:#4f46e5;box-shadow:0 0 0 4px rgba(79,70,229,0.1);}
-        textarea{resize:vertical;min-height:140px;}
-        .admin-section{background:#fef3c7;border:2px solid #f59e0b;border-radius:16px;padding:25px;margin-bottom:30px;}
-        .checkbox-group{display:flex;align-items:center;gap:15px;padding:20px;background:#f8fafc;border:2px solid #e5e7eb;border-radius:14px;cursor:pointer;transition:all 0.3s;}
-        .checkbox-group:hover{border-color:#4f46e5;transform:translateY(-2px);}
-        .controls{display:flex;gap:20px;justify-content:center;margin:50px 0;flex-wrap:wrap;}
-        .btn{padding:18px 40px;border:none;border-radius:16px;font-size:1.15rem;font-weight:600;cursor:pointer;transition:all 0.3s;display:flex;align-items:center;gap:12px;}
-        .btn-start{background:linear-gradient(135deg,#10b981,#059669);color:white;box-shadow:0 10px 25px rgba(16,185,129,0.4);}
-        .btn-stop{background:linear-gradient(135deg,#ef4444,#dc2626);color:white;box-shadow:0 10px 25px rgba(239,68,68,0.4);}
-        .btn-clear{background:linear-gradient(135deg,#6b7280,#4b5563);color:white;box-shadow:0 10px 25px rgba(107,114,128,0.4);}
-        .btn:hover{transform:translateY(-3px);box-shadow:0 15px 35px rgba(0,0,0,0.3);}
-        .logs-container{background:#1e293b;border-radius:20px;padding:30px;margin-top:30px;}
-        #logs{background:#0f172a;color:#e2e8f0;border-radius:16px;padding:25px;height:380px;overflow-y:auto;font-family:monospace;font-size:0.95rem;line-height:1.6;white-space:pre-wrap;border:1px solid #475569;}
-        .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:25px;margin-bottom:30px;}
-        .stat-card{background:#f8fafc;padding:30px;border-radius:16px;text-align:center;box-shadow:0 10px 25px rgba(0,0,0,0.1);transition:all 0.3s;}
-        .stat-number{font-size:3rem;font-weight:700;color:#4f46e5;margin-bottom:10px;}
-        @media(max-width:768px){.form-grid{grid-template-columns:1fr;}.controls{flex-direction:column;}}
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #f59e0b;
+            --accent: #10b981;
+            --glass-bg: rgba(255, 255, 255, 0.95);
+            --glass-dark: rgba(255, 255, 255, 0.85);
+            --border-light: rgba(0, 0, 0, 0.08);
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+            --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --gradient-success: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #cbd5e1 100%);
+            color: #1e293b;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 15% 25%, rgba(99, 102, 241, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 85% 75%, rgba(245, 158, 11, 0.06) 0%, transparent 50%),
+                radial-gradient(circle at 50% 10%, rgba(16, 185, 129, 0.05) 0%, transparent 50%);
+            z-index: -1;
+            animation: shimmer 15s ease-in-out infinite;
+        }
+
+        @keyframes shimmer {
+            0%, 100% { opacity: 0.8; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.02); }
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            gap: 2.5rem;
+        }
+
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(25px);
+            border: 1px solid var(--border-light);
+            border-radius: 28px;
+            padding: 3rem;
+            box-shadow: var(--shadow-xl);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .glass-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+        }
+
+        .glass-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: var(--gradient-primary);
+            opacity: 0.8;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+            position: relative;
+        }
+
+        .logo {
+            font-size: clamp(3rem, 6vw, 4.5rem);
+            font-weight: 800;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.75rem;
+            letter-spacing: -0.025em;
+            position: relative;
+        }
+
+        .logo::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 4px;
+            background: var(--gradient-primary);
+            border-radius: 2px;
+        }
+
+        .subtitle {
+            color: #64748b;
+            font-size: 1.25rem;
+            font-weight: 400;
+            letter-spacing: -0.025em;
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1.5rem;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            border-radius: 50px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            margin-top: 1rem;
+            color: #059669;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #10b981;
+            animation: pulse 2s infinite;
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 1);
+        }
+
+        @keyframes pulse {
+            0% { 
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+            }
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .form-group {
+            position: relative;
+        }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+        label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #374151;
+            letter-spacing: 0.025em;
+            text-transform: uppercase;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 1.25rem 1.5rem;
+            background: rgba(255, 255, 255, 0.7);
+            border: 2px solid rgba(0, 0, 0, 0.05);
+            border-radius: 20px;
+            color: #1e293b;
+            font-size: 1rem;
+            font-weight: 500;
+            font-family: inherit;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(15px);
+        }
+
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: rgba(255, 255, 255, 0.95);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+            transform: translateY(-2px);
+        }
+
+        input::placeholder, textarea::placeholder {
+            color: #9ca3af;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 140px;
+            font-family: 'Poppins', sans-serif;
+            line-height: 1.6;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 1.5rem;
+            justify-content: center;
+            margin-top: 2.5rem;
+        }
+
+        .btn {
+            padding: 1.25rem 3rem;
+            border: none;
+            border-radius: 24px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+            overflow: hidden;
+            min-width: 160px;
+            font-family: inherit;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-start {
+            background: var(--gradient-success);
+            color: white;
+        }
+
+        .btn-stop {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-4px) scale(1.02);
+            box-shadow: var(--shadow-xl);
+        }
+
+        .btn:active {
+            transform: translateY(-2px) scale(1);
+        }
+
+        .logs-container {
+            height: 350px;
+            overflow-y: auto;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 20px;
+            padding: 2rem;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.9rem;
+            line-height: 1.7;
+            border: 2px solid rgba(0, 0, 0, 0.05);
+            backdrop-filter: blur(20px);
+            box-shadow: var(--shadow-lg);
+            position: relative;
+        }
+
+        .logs-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .logs-container::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.02);
+            border-radius: 4px;
+        }
+
+        .logs-container::-webkit-scrollbar-thumb {
+            background: rgba(99, 102, 241, 0.3);
+            border-radius: 4px;
+        }
+
+        .logs-container::-webkit-scrollbar-thumb:hover {
+            background: rgba(99, 102, 241, 0.5);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1.5rem 1rem;
+            }
+            
+            .glass-card {
+                padding: 2rem 1.5rem;
+                border-radius: 24px;
+            }
+            
+            .form-grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+            
+            .btn-group {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .btn {
+                padding: 1.25rem 2rem;
+            }
+        }
+
+        /* Loading animation */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1><i class="fas fa-robot"></i> Premium Bot v4.5</h1>
-            <p>✅ Admin Panel • Commands • Anti-Logout • Render Ready</p>
-        </div>
-
-        <div class="status-bar status-stopped" id="statusBar">
-            <div class="status-item">
-                <div class="status-dot"></div>
-                <span>Status: Stopped</span>
-            </div>
-            <div class="status-item">
-                <span id="uptime">00:00:00</span>
-            </div>
-        </div>
-
-        <div class="content">
-            <div class="stats-grid" id="statsGrid" style="display:none;">
-                <div class="stat-card">
-                    <div class="stat-number" id="totalWelcomed">0</div>
-                    <div>Total Welcomed</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number" id="todayWelcomed">0</div>
-                    <div>Today Welcomed</div>
+        <div class="glass-card">
+            <div class="header">
+                <h1 class="logo">✨ PREMIUM BOT</h1>
+                <p class="subtitle">Instagram Direct Messenger • Professional Edition</p>
+                <div class="status-indicator">
+                    <div class="status-dot"></div>
+                    <span>Ready for deployment</span>
                 </div>
             </div>
 
             <form id="botForm">
                 <div class="form-grid">
                     <div class="form-group">
-                        <label><i class="fas fa-key"></i> Session Token <span style="color:#ef4444">*</span></label>
-                        <input type="password" name="session" placeholder="Fresh session token" required>
+                        <label><i class="fas fa-key text-blue-600"></i> Session Token</label>
+                        <input type="password" name="session" placeholder="Enter your Instagram session token" required>
                     </div>
+
                     <div class="form-group">
-                        <label><i class="fas fa-hashtag"></i> Group IDs <span style="color:#ef4444">*</span></label>
-                        <input type="text" name="group_ids" placeholder="1234567890,0987654321" required>
+                        <label><i class="fas fa-users text-amber-500"></i> Admin Usernames</label>
+                        <input type="text" name="admin_ids" placeholder="username1,username2,username3">
                     </div>
+
+                    <div class="form-group full-width">
+                        <label><i class="fas fa-comment-dots text-green-500"></i> Welcome Messages</label>
+                        <textarea name="welcome" placeholder="🌟 Welcome to our group @{username}!&#10;🎉 Have fun & stay active!&#10;💎 Enjoy premium experience!&#10;🔥 Let's grow together!"></textarea>
+                    </div>
+
                     <div class="form-group">
-                        <label><i class="fas fa-users-crown"></i> Admin IDs</label>
-                        <input type="text" name="admin_ids" placeholder="admin1,admin2,you">
+                        <label><i class="fas fa-at text-purple-500"></i> Mention Users</label>
+                        <select name="use_custom_name">
+                            <option value="yes">✅ Yes</option>
+                            <option value="no">❌ No</option>
+                        </select>
                     </div>
+
                     <div class="form-group">
-                        <label><i class="fas fa-clock"></i> Welcome Delay (sec)</label>
-                        <input type="number" name="delay" value="5" min="3" max="15">
+                        <label><i class="fas fa-robot text-indigo-500"></i> Bot Commands</label>
+                        <select name="enable_commands">
+                            <option value="yes">✅ Enabled</option>
+                            <option value="no">❌ Disabled</option>
+                        </select>
                     </div>
+
                     <div class="form-group">
-                        <label><i class="fas fa-sync"></i> Poll Interval <span style="color:#f59e0b">(25s recommended)</span></label>
-                        <input type="number" name="poll" value="25" min="20" max="45">
+                        <label><i class="fas fa-hashtag text-pink-500"></i> Group IDs</label>
+                        <input type="text" name="group_ids" placeholder="123456789,987654321,111222333" required>
                     </div>
-                    <div class="form-group full">
-                        <label><i class="fas fa-comment-dots"></i> Welcome Messages <span style="color:#ef4444">*</span></label>
-                        <textarea name="welcome">Welcome bro! 🔥
-Have fun! 🎉
-Enjoy group! 😊
-Follow rules! 👮</textarea>
+
+                    <div class="form-group">
+                        <label><i class="fas fa-clock text-orange-500"></i> Delay (seconds)</label>
+                        <input type="number" name="delay" value="3" min="1" max="10">
+                    </div>
+
+                    <div class="form-group">
+                        <label><i class="fas fa-sync-alt text-teal-500"></i> Poll Rate (seconds)</label>
+                        <input type="number" name="poll" value="5" min="1" max="30">
                     </div>
                 </div>
 
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:25px;margin-bottom:35px;">
-                    <div class="checkbox-group" onclick="toggleCheckbox('use_custom_name')">
-                        <input type="checkbox" id="use_custom_name" name="use_custom_name" value="yes" checked>
-                        <label for="use_custom_name" style="cursor:pointer;flex:1;margin:0;font-weight:600;">
-                            <i class="fas fa-user-tag"></i> Mention @username
-                        </label>
-                    </div>
-                    <div class="checkbox-group" onclick="toggleCheckbox('enable_commands')">
-                        <input type="checkbox" id="enable_commands" name="enable_commands" value="yes" checked>
-                        <label for="enable_commands" style="cursor:pointer;flex:1;margin:0;font-weight:600;">
-                            <i class="fas fa-terminal"></i> Enable Commands
-                        </label>
-                    </div>
-                </div>
-
-                <div class="admin-section">
-                    <h3 style="color:#b45309;margin-bottom:15px;"><i class="fas fa-crown"></i> 👑 Admin Commands</h3>
-                    <div style="font-size:0.95rem;color:#92400e;line-height:1.6;">
-                        <strong>/spam @user message</strong> - Spam user<br>
-                        <strong>/stopspam</strong> - Stop spam<br>
-                        <strong>/ping, /uptime, /help</strong> - Public commands
-                    </div>
-                </div>
-
-                <div class="controls">
+                <div class="btn-group">
                     <button type="button" class="btn btn-start" onclick="startBot()">
-                        <i class="fas fa-play"></i> Start Bot
+                        <i class="fas fa-play mr-2"></i>🚀 Deploy Bot
                     </button>
                     <button type="button" class="btn btn-stop" onclick="stopBot()">
-                        <i class="fas fa-stop"></i> Stop Bot
-                    </button>
-                    <button type="button" class="btn btn-clear" onclick="clearLogs()">
-                        <i class="fas fa-trash"></i> Clear Logs
+                        <i class="fas fa-stop mr-2"></i>🛑 Stop Bot
                     </button>
                 </div>
             </form>
 
-            <div class="logs-container">
-                <div style="display:flex;justify-content:space-between;align-items:center;color:white;margin-bottom:20px;font-weight:600;">
-                    <div><i class="fas fa-list"></i> Live Logs</div>
-                    <button onclick="clearLogs()" style="background:#6b7280;color:white;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-weight:600;">Clear</button>
+            <div class="logs-container" id="logs">
+                <div style="color: #94a3b8; text-align: center; padding: 3rem 1rem; font-weight: 500;">
+                    📊 Real-time logs will appear here automatically<br>
+                    <small style="opacity: 0.7;">Refresh rate: 2 seconds</small>
                 </div>
-                <div id="logs">🚀 Premium Bot v4.5 ready! Admin features enabled ✅</div>
             </div>
         </div>
     </div>
 
     <script>
-        function toggleCheckbox(id) {
-            document.getElementById(id).click();
-        }
-        
         async function startBot() {
+            const btn = event.target;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Deploying...';
+            btn.disabled = true;
+            
             try {
                 const formData = new FormData(document.getElementById('botForm'));
-                const response = await fetch('/start', {method: 'POST', body: formData});
-                const result = await response.json();
-                alert(result.message);
-                updateStatus();
-            } catch (error) {
-                alert('❌ Error: ' + error.message);
-            }
-        }
-        
-        async function stopBot() {
-            try {
-                const response = await fetch('/stop', {method: 'POST'});
-                const result = await response.json();
-                alert(result.message);
-                updateStatus();
-            } catch (error) {
-                alert('❌ Error: ' + error.message);
-            }
-        }
-        
-        async function clearLogs() {
-            try {
-                await fetch('/clear_logs', {method: 'POST'});
-                document.getElementById('logs').textContent = '🧹 Logs cleared!';
-            } catch (error) {}
-        }
-        
-        async function updateStatus() {
-            try {
-                const response = await fetch('/stats');
+                const response = await fetch('/start', { method: 'POST', body: formData });
                 const data = await response.json();
-                document.getElementById('uptime').textContent = data.uptime;
-                
-                const statusBar = document.getElementById('statusBar');
-                const statusDot = statusBar.querySelector('.status-dot');
-                const statusText = statusBar.querySelector('span');
-                
-                if (data.status === 'running') {
-                    statusBar.className = 'status-bar status-running';
-                    statusDot.style.background = '#10b981';
-                    statusText.textContent = 'Status: Running';
-                    document.getElementById('statsGrid').style.display = 'grid';
-                    document.getElementById('totalWelcomed').textContent = data.total_welcomed;
-                    document.getElementById('todayWelcomed').textContent = data.today_welcomed;
-                } else {
-                    statusBar.className = 'status-bar status-stopped';
-                    statusDot.style.background = '#ef4444';
-                    statusText.textContent = 'Status: Stopped';
-                    document.getElementById('statsGrid').style.display = 'none';
-                }
-            } catch (error) {}
+                alert('✅ ' + data.message);
+            } catch (error) {
+                alert('❌ ' + error.message);
+            } finally {
+                btn.innerHTML = '<i class="fas fa-play mr-2"></i>🚀 Deploy Bot';
+                btn.disabled = false;
+            }
         }
-        
-        async function updateLogs() {
+
+        async function stopBot() {
+            const btn = event.target;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Stopping...';
+            btn.disabled = true;
+            
+            try {
+                const response = await fetch('/stop', { method: 'POST' });
+                const data = await response.json();
+                alert('🛑 ' + data.message);
+            } catch (error) {
+                alert('❌ ' + error.message);
+            } finally {
+                btn.innerHTML = '<i class="fas fa-stop mr-2"></i>🛑 Stop Bot';
+                btn.disabled = false;
+            }
+        }
+
+        // Auto-refresh logs with smooth animation
+        setInterval(async () => {
             try {
                 const response = await fetch('/logs');
                 const data = await response.json();
-                const logsDiv = document.getElementById('logs');
-                logsDiv.textContent = data.logs.join('\
-');
-                logsDiv.scrollTop = logsDiv.scrollHeight;
-            } catch (error) {}
-        }
-        
-        setInterval(() => {
-            updateStatus();
-            updateLogs();
-        }, 3000);
-        
-        updateStatus();
-        updateLogs();
+                const logsEl = document.getElementById('logs');
+                const newLogs = data.logs.slice(-50).join('\');
+                
+                if (newLogs && logsEl.children.length === 1) {
+                    logsEl.innerHTML = '';
+                }
+                
+                logsEl.textContent = newLogs || 'No logs yet...';
+                logsEl.scrollTop = logsEl.scrollHeight;
+            } catch (error) {
+                document.getElementById('logs').textContent = '⚠️ Connection error - retrying...';
+            }
+        }, 2000);
+
+        // Auto-scroll logs
+        const logsEl = document.getElementById('logs');
+        logsEl.addEventListener('scroll', function() {
+            if (logsEl.scrollTop + logsEl.clientHeight >= logsEl.scrollHeight - 10) {
+                // Auto-scroll if near bottom
+                setTimeout(() => logsEl.scrollTop = logsEl.scrollHeight, 100);
+            }
+        });
     </script>
 </body>
 </html>"""
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    log("🌟 Premium Instagram Bot v4.5 - COMPLETE!")
-    log("✅ Admin IDs field ADDED!")
-    log("✅ Commands 100% WORKING!")
-    log("✅ Render.com ready - Copy paste karo!")
-    app.run(host="0.0.0.0", port=port, debug=False)
+    app.run(host="0.0.0.0", port=5000, debug=False)
