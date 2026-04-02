@@ -3,12 +3,12 @@ import threading
 import time
 import random
 import pydantic
-# FIX for instagrapi + pydantic crash
-from pydantic.class_validators import Validator
-Validator.check_fields = lambda self: None
+
 from datetime import datetime
 from flask import Flask, render_template_string, request, jsonify
 from instagrapi import Client
+from pydantic.class_validators import Validator
+Validator.check_fields = lambda self: None
 from instagrapi.exceptions import (
     LoginRequired, RateLimitError, ClientError, ClientForbiddenError, 
     ClientNotFoundError, ChallengeRequired, PleaseWaitFewMinutes
