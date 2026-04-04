@@ -1,0 +1,788 @@
+{
+  "commands": {
+    "group_management": {
+      "category_name": "👥 Group Management",
+      "color": "#FF6B6B",
+      "commands": [
+        {
+          "name": "/groupname newname",
+          "description": "Change group name",
+          "usage": "/groupname Super Squad"
+        },
+        {
+          "name": "/grouplock",
+          "description": "Lock group name (only admin can change)",
+          "usage": "/grouplock"
+        },
+        {
+          "name": "/groupunlock",
+          "description": "Unlock group name",
+          "usage": "/groupunlock"
+        },
+        {
+          "name": "/removemember @user",
+          "description": "Remove member from group",
+          "usage": "/removemember @spammer"
+        },
+        {
+          "name": "/memberinfo @user",
+          "description": "Get member details",
+          "usage": "/memberinfo @john"
+        },
+        {
+          "name": "/groupinfo",
+          "description": "Get full group info",
+          "usage": "/groupinfo"
+        },
+        {
+          "name": "/membercount",
+          "description": "Count total members",
+          "usage": "/membercount"
+        },
+        {
+          "name": "/listmembers",
+          "description": "List all members",
+          "usage": "/listmembers"
+        },
+        {
+          "name": "/adminlist",
+          "description": "List all admins",
+          "usage": "/adminlist"
+        },
+        {
+          "name": "/setdesc description",
+          "description": "Set group description",
+          "usage": "/setdesc Friends group"
+        }
+      ]
+    },
+    "auto_reply": {
+      "category_name": "🤖 Auto Reply System",
+      "color": "#4ECDC4",
+      "commands": [
+        {
+          "name": "/autoreplyon",
+          "description": "Enable auto-reply when offline",
+          "usage": "/autoreplyon"
+        },
+        {
+          "name": "/autoreplyoff",
+          "description": "Disable auto-reply",
+          "usage": "/autoreplyoff"
+        },
+        {
+          "name": "/setreply message",
+          "description": "Set auto-reply message",
+          "usage": "/setreply I'm offline, will reply soon!"
+        },
+        {
+          "name": "/getreply",
+          "description": "Check current auto-reply",
+          "usage": "/getreply"
+        },
+        {
+          "name": "/replytoall on/off",
+          "description": "Reply to everyone or only mentions",
+          "usage": "/replytoall on"
+        },
+        {
+          "name": "/delayreplied seconds",
+          "description": "Set reply delay",
+          "usage": "/delayreplied 10"
+        },
+        {
+          "name": "/replyemoji emoji",
+          "description": "Add emoji to auto-reply",
+          "usage": "/replyemoji 🤖"
+        },
+        {
+          "name": "/replydisable @user",
+          "description": "Don't auto-reply to specific user",
+          "usage": "/replydisable @spam"
+        },
+        {
+          "name": "/replyenable @user",
+          "description": "Re-enable auto-reply for user",
+          "usage": "/replyenable @spam"
+        },
+        {
+          "name": "/clearreplyhist",
+          "description": "Clear auto-reply history",
+          "usage": "/clearreplyhist"
+        }
+      ]
+    },
+    "youtube": {
+      "category_name": "🎥 YouTube Features",
+      "color": "#FF4757",
+      "commands": [
+        {
+          "name": "/yt search_query",
+          "description": "Search YouTube video",
+          "usage": "/yt Bollywood songs"
+        },
+        {
+          "name": "/ytplay video_name",
+          "description": "Find and play video",
+          "usage": "/ytplay Dil Bechara"
+        },
+        {
+          "name": "/ytrandom",
+          "description": "Play random video",
+          "usage": "/ytrandom"
+        },
+        {
+          "name": "/yttrending",
+          "description": "Get trending videos",
+          "usage": "/yttrending"
+        },
+        {
+          "name": "/ytstop",
+          "description": "Stop current video",
+          "usage": "/ytstop"
+        },
+        {
+          "name": "/ytdownload url",
+          "description": "Download YouTube video",
+          "usage": "/ytdownload https://..."
+        },
+        {
+          "name": "/ytinfo url",
+          "description": "Get video info",
+          "usage": "/ytinfo https://..."
+        },
+        {
+          "name": "/ytsubtitle url",
+          "description": "Download subtitles",
+          "usage": "/ytsubtitle https://..."
+        },
+        {
+          "name": "/ytplaylist url",
+          "description": "Get playlist info",
+          "usage": "/ytplaylist https://..."
+        },
+        {
+          "name": "/ytsearch latest",
+          "description": "Search latest videos",
+          "usage": "/ytsearch latest Bollywood"
+        }
+      ]
+    },
+    "messaging": {
+      "category_name": "💬 Messaging",
+      "color": "#A29BFE",
+      "commands": [
+        {
+          "name": "/broadcast message",
+          "description": "Send to all group members",
+          "usage": "/broadcast Hello everyone!"
+        },
+        {
+          "name": "/dm @user message",
+          "description": "Send DM to user",
+          "usage": "/dm @john Hey!"
+        },
+        {
+          "name": "/reply @user message",
+          "description": "Reply to specific user",
+          "usage": "/reply @john Okay!"
+        },
+        {
+          "name": "/mention @user",
+          "description": "Mention a user",
+          "usage": "/mention @john"
+        },
+        {
+          "name": "/announce message",
+          "description": "Important announcement",
+          "usage": "/announce 📢 IMPORTANT!"
+        },
+        {
+          "name": "/silent message",
+          "description": "Send without notification",
+          "usage": "/silent secret"
+        },
+        {
+          "name": "/spam @user message",
+          "description": "Spam user (admin only)",
+          "usage": "/spam @hater go away"
+        },
+        {
+          "name": "/stopspam",
+          "description": "Stop all spam",
+          "usage": "/stopspam"
+        },
+        {
+          "name": "/quote @user",
+          "description": "Quote user's message",
+          "usage": "/quote @john"
+        },
+        {
+          "name": "/forward message",
+          "description": "Forward message to another group",
+          "usage": "/forward Hello guys"
+        }
+      ]
+    },
+    "user_info": {
+      "category_name": "👤 User Information",
+      "color": "#FF9FF3",
+      "commands": [
+        {
+          "name": "/whoami",
+          "description": "Get your profile info",
+          "usage": "/whoami"
+        },
+        {
+          "name": "/profile @user",
+          "description": "Get user profile",
+          "usage": "/profile @john"
+        },
+        {
+          "name": "/followercount @user",
+          "description": "Get follower count",
+          "usage": "/followercount @john"
+        },
+        {
+          "name": "/followingcount @user",
+          "description": "Get following count",
+          "usage": "/followingcount @john"
+        },
+        {
+          "name": "/postcount @user",
+          "description": "Get post count",
+          "usage": "/postcount @john"
+        },
+        {
+          "name": "/bio @user",
+          "description": "Get user bio",
+          "usage": "/bio @john"
+        },
+        {
+          "name": "/userjoined @user",
+          "description": "When user joined",
+          "usage": "/userjoined @john"
+        },
+        {
+          "name": "/lastactive @user",
+          "description": "Last activity time",
+          "usage": "/lastactive @john"
+        },
+        {
+          "name": "/isverified @user",
+          "description": "Check if verified",
+          "usage": "/isverified @john"
+        },
+        {
+          "name": "/getavatar @user",
+          "description": "Get user profile picture",
+          "usage": "/getavatar @john"
+        }
+      ]
+    },
+    "fun_commands": {
+      "category_name": "🎉 Fun & Games",
+      "color": "#FECB10",
+      "commands": [
+        {
+          "name": "/joke",
+          "description": "Get random joke",
+          "usage": "/joke"
+        },
+        {
+          "name": "/meme",
+          "description": "Get random meme",
+          "usage": "/meme"
+        },
+        {
+          "name": "/roast @user",
+          "description": "Funny roast message",
+          "usage": "/roast @john"
+        },
+        {
+          "name": "/compliment @user",
+          "description": "Compliment user",
+          "usage": "/compliment @john"
+        },
+        {
+          "name": "/rate @user",
+          "description": "Rate user 1-10",
+          "usage": "/rate @john"
+        },
+        {
+          "name": "/roll",
+          "description": "Roll dice",
+          "usage": "/roll"
+        },
+        {
+          "name": "/flip",
+          "description": "Flip coin",
+          "usage": "/flip"
+        },
+        {
+          "name": "/random number",
+          "description": "Random number 1-100",
+          "usage": "/random"
+        },
+        {
+          "name": "/trivia",
+          "description": "Random trivia question",
+          "usage": "/trivia"
+        },
+        {
+          "name": "/riddle",
+          "description": "Get a riddle",
+          "usage": "/riddle"
+        }
+      ]
+    },
+    "emoji_commands": {
+      "category_name": "😂 Emoji Reactions",
+      "color": "#FF6B6B",
+      "commands": [
+        {
+          "name": "/react emoji",
+          "description": "React with emoji",
+          "usage": "/react 😂"
+        },
+        {
+          "name": "/love",
+          "description": "Send love reaction",
+          "usage": "/love"
+        },
+        {
+          "name": "/laugh",
+          "description": "Laugh reaction",
+          "usage": "/laugh"
+        },
+        {
+          "name": "/fire",
+          "description": "Fire reaction 🔥",
+          "usage": "/fire"
+        },
+        {
+          "name": "/wow",
+          "description": "WOW reaction 😮",
+          "usage": "/wow"
+        },
+        {
+          "name": "/sad",
+          "description": "Sad reaction 😢",
+          "usage": "/sad"
+        },
+        {
+          "name": "/angry",
+          "description": "Angry reaction 😠",
+          "usage": "/angry"
+        },
+        {
+          "name": "/thumbsup",
+          "description": "Thumbs up 👍",
+          "usage": "/thumbsup"
+        },
+        {
+          "name": "/thumbsdown",
+          "description": "Thumbs down 👎",
+          "usage": "/thumbsdown"
+        },
+        {
+          "name": "/celebrate",
+          "description": "Celebration reaction 🎉",
+          "usage": "/celebrate"
+        }
+      ]
+    },
+    "admin_commands": {
+      "category_name": "👑 Admin Only",
+      "color": "#B45309",
+      "commands": [
+        {
+          "name": "/setadmin @user",
+          "description": "Make user admin",
+          "usage": "/setadmin @john"
+        },
+        {
+          "name": "/removeadmin @user",
+          "description": "Remove admin rights",
+          "usage": "/removeadmin @john"
+        },
+        {
+          "name": "/kick @user",
+          "description": "Kick user from group",
+          "usage": "/kick @spammer"
+        },
+        {
+          "name": "/ban @user",
+          "description": "Ban user permanently",
+          "usage": "/ban @spammer"
+        },
+        {
+          "name": "/unban @user",
+          "description": "Unban user",
+          "usage": "/unban @spammer"
+        },
+        {
+          "name": "/muteuser @user",
+          "description": "Mute user temporarily",
+          "usage": "/muteuser @spam 60"
+        },
+        {
+          "name": "/unmuteuser @user",
+          "description": "Unmute user",
+          "usage": "/unmuteuser @spam"
+        },
+        {
+          "name": "/clearmessages @user",
+          "description": "Clear user messages",
+          "usage": "/clearmessages @spam"
+        },
+        {
+          "name": "/lockgroup",
+          "description": "Lock group (only admin posts)",
+          "usage": "/lockgroup"
+        },
+        {
+          "name": "/unlockgroup",
+          "description": "Unlock group",
+          "usage": "/unlockgroup"
+        }
+      ]
+    },
+    "bot_info": {
+      "category_name": "🤖 Bot Information",
+      "color": "#00D4FF",
+      "commands": [
+        {
+          "name": "/help",
+          "description": "Show all commands",
+          "usage": "/help"
+        },
+        {
+          "name": "/ping",
+          "description": "Check bot status",
+          "usage": "/ping"
+        },
+        {
+          "name": "/uptime",
+          "description": "Bot running time",
+          "usage": "/uptime"
+        },
+        {
+          "name": "/version",
+          "description": "Bot version",
+          "usage": "/version"
+        },
+        {
+          "name": "/stats",
+          "description": "Bot statistics",
+          "usage": "/stats"
+        },
+        {
+          "name": "/serverinfo",
+          "description": "Server information",
+          "usage": "/serverinfo"
+        },
+        {
+          "name": "/botowner",
+          "description": "Bot owner info",
+          "usage": "/botowner"
+        },
+        {
+          "name": "/feedback message",
+          "description": "Send feedback",
+          "usage": "/feedback Great bot!"
+        },
+        {
+          "name": "/report issue",
+          "description": "Report issue",
+          "usage": "/report Bot crashed"
+        },
+        {
+          "name": "/donate",
+          "description": "Donation info",
+          "usage": "/donate"
+        }
+      ]
+    },
+    "text_conversion": {
+      "category_name": "✏️ Text Conversion",
+      "color": "#9D84B7",
+      "commands": [
+        {
+          "name": "/uppercase text",
+          "description": "Convert to UPPERCASE",
+          "usage": "/uppercase hello"
+        },
+        {
+          "name": "/lowercase text",
+          "description": "Convert to lowercase",
+          "usage": "/lowercase HELLO"
+        },
+        {
+          "name": "/reverse text",
+          "description": "Reverse text",
+          "usage": "/reverse hello"
+        },
+        {
+          "name": "/bold text",
+          "description": "Make text **bold**",
+          "usage": "/bold hello"
+        },
+        {
+          "name": "/italic text",
+          "description": "Make text *italic*",
+          "usage": "/italic hello"
+        },
+        {
+          "name": "/strike text",
+          "description": "Strikethrough text",
+          "usage": "/strike hello"
+        },
+        {
+          "name": "/morse text",
+          "description": "Convert to morse code",
+          "usage": "/morse hello"
+        },
+        {
+          "name": "/binary text",
+          "description": "Convert to binary",
+          "usage": "/binary hello"
+        },
+        {
+          "name": "/hex text",
+          "description": "Convert to hex",
+          "usage": "/hex hello"
+        },
+        {
+          "name": "/ascii text",
+          "description": "Get ASCII values",
+          "usage": "/ascii hello"
+        }
+      ]
+    },
+    "time_date": {
+      "category_name": "⏰ Time & Date",
+      "color": "#FF9FF3",
+      "commands": [
+        {
+          "name": "/time",
+          "description": "Current time",
+          "usage": "/time"
+        },
+        {
+          "name": "/date",
+          "description": "Current date",
+          "usage": "/date"
+        },
+        {
+          "name": "/time timezone",
+          "description": "Time in timezone",
+          "usage": "/time IST"
+        },
+        {
+          "name": "/countdown days",
+          "description": "Countdown to date",
+          "usage": "/countdown 10"
+        },
+        {
+          "name": "/daysleft event",
+          "description": "Days until event",
+          "usage": "/daysleft birthday"
+        },
+        {
+          "name": "/clock timezone",
+          "description": "World clock",
+          "usage": "/clock New York"
+        },
+        {
+          "name": "/timer seconds",
+          "description": "Set timer",
+          "usage": "/timer 60"
+        },
+        {
+          "name": "/reminder message",
+          "description": "Set reminder",
+          "usage": "/reminder Exercise"
+        },
+        {
+          "name": "/calendar",
+          "description": "Show calendar",
+          "usage": "/calendar"
+        },
+        {
+          "name": "/upcoming",
+          "description": "Upcoming events",
+          "usage": "/upcoming"
+        }
+      ]
+    },
+    "media": {
+      "category_name": "🎬 Media Commands",
+      "color": "#FF6B6B",
+      "commands": [
+        {
+          "name": "/photo caption",
+          "description": "Send random photo",
+          "usage": "/photo nature"
+        },
+        {
+          "name": "/video category",
+          "description": "Send video",
+          "usage": "/video funny"
+        },
+        {
+          "name": "/music song",
+          "description": "Search music",
+          "usage": "/music Bollywood"
+        },
+        {
+          "name": "/movie name",
+          "description": "Get movie info",
+          "usage": "/movie Avatar"
+        },
+        {
+          "name": "/tvshow name",
+          "description": "Get TV show info",
+          "usage": "/tvshow Breaking Bad"
+        },
+        {
+          "name": "/anime name",
+          "description": "Get anime info",
+          "usage": "/anime Naruto"
+        },
+        {
+          "name": "/song lyrics",
+          "description": "Get song lyrics",
+          "usage": "/song Imagine"
+        },
+        {
+          "name": "/album artist",
+          "description": "Get album info",
+          "usage": "/album Coldplay"
+        },
+        {
+          "name": "/podcast search",
+          "description": "Search podcast",
+          "usage": "/podcast tech"
+        },
+        {
+          "name": "/stream service",
+          "description": "Streaming info",
+          "usage": "/stream Netflix"
+        }
+      ]
+    },
+    "educational": {
+      "category_name": "📚 Educational",
+      "color": "#1A5F7A",
+      "commands": [
+        {
+          "name": "/wiki search",
+          "description": "Search Wikipedia",
+          "usage": "/wiki Python"
+        },
+        {
+          "name": "/define word",
+          "description": "Dictionary definition",
+          "usage": "/define serendipity"
+        },
+        {
+          "name": "/synonym word",
+          "description": "Get synonyms",
+          "usage": "/synonym happy"
+        },
+        {
+          "name": "/antonym word",
+          "description": "Get antonyms",
+          "usage": "/antonym happy"
+        },
+        {
+          "name": "/translation text",
+          "description": "Translate text",
+          "usage": "/translation Hello"
+        },
+        {
+          "name": "/spelling word",
+          "description": "Check spelling",
+          "usage": "/spelling teh"
+        },
+        {
+          "name": "/grammar text",
+          "description": "Check grammar",
+          "usage": "/grammar i am happy"
+        },
+        {
+          "name": "/formula math",
+          "description": "Math formula help",
+          "usage": "/formula pythagorean"
+        },
+        {
+          "name": "/lesson topic",
+          "description": "Learn topic",
+          "usage": "/lesson physics"
+        },
+        {
+          "name": "/quote author",
+          "description": "Inspirational quotes",
+          "usage": "/quote einstein"
+        }
+      ]
+    },
+    "utility": {
+      "category_name": "🛠️ Utility Tools",
+      "color": "#4A5568",
+      "commands": [
+        {
+          "name": "/qrcode text",
+          "description": "Generate QR code",
+          "usage": "/qrcode hello"
+        },
+        {
+          "name": "/calculate expression",
+          "description": "Calculator",
+          "usage": "/calculate 5+5"
+        },
+        {
+          "name": "/unit conversion",
+          "description": "Unit converter",
+          "usage": "/unit 100km to miles"
+        },
+        {
+          "name": "/currency exchange",
+          "description": "Currency converter",
+          "usage": "/currency 100 USD to INR"
+        },
+        {
+          "name": "/password generate",
+          "description": "Generate password",
+          "usage": "/password"
+        },
+        {
+          "name": "/encode text",
+          "description": "Encode text",
+          "usage": "/encode secret"
+        },
+        {
+          "name": "/decode text",
+          "description": "Decode text",
+          "usage": "/decode encoded"
+        },
+        {
+          "name": "/weather city",
+          "description": "Weather forecast",
+          "usage": "/weather London"
+        },
+        {
+          "name": "/ip check",
+          "description": "Check IP address",
+          "usage": "/ip"
+        },
+        {
+          "name": "/dns lookup",
+          "description": "DNS lookup",
+          "usage": "/dns google.com"
+        }
+      ]
+    }
+  }
+}
