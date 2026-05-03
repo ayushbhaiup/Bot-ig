@@ -71,6 +71,7 @@ def log(msg):
     if len(LOGS) > 500:
         LOGS[:] = LOGS[-500:]
     print(lm)
+    return lm
 
 def clear_logs():
     global LOGS
@@ -86,7 +87,7 @@ def create_stable_client():
     cl.set_user_agent(ua)
     return cl
 
-def safe_login(cl, token, max_retries=2):
+def safe_login(cl, token, max_retries=3):
     global LOGIN_SUCCESS, SESSION_TOKEN
     for attempt in range(max_retries):
         try:
@@ -95,10 +96,10 @@ def safe_login(cl, token, max_retries=2):
             account = cl.account_info()
             if account and hasattr(account, 'username') and account.username:
                 username = account.username
-                log(f"✅ LOGIN SUCCESS: @{username}")
+                log(f"✅ Login SUCCESS: @{username}")
                 LOGIN_SUCCESS = True
                 SESSION_TOKEN = token
-                time.sleep(1)
+                time.sleep(3)
                 return True, username
         except Exception as e:
             error_msg = str(e).lower()
@@ -106,14 +107,14 @@ def safe_login(cl, token, max_retries=2):
                 log("❌ Session expired!")
                 return False, None
             elif "rate limit" in error_msg:
-                log("⏳ Rate limited - 30s wait")
-                time.sleep(30)
+                log("⏳ Rate limited - 60s wait")
+                time.sleep(60)
             elif "challenge" in error_msg:
                 log("❌ Challenge required")
-                time.sleep(15)
+                time.sleep(30)
             else:
                 log(f"⚠️ Login error: {str(e)[:50]}")
-                time.sleep(5 * (attempt + 1))
+                time.sleep(15 * (attempt + 1))
     return False, None
 
 def session_health_check():
@@ -358,13 +359,13 @@ def run_bot(session_token, wm, gids, dly, pol, ucn, ecmd, admin_ids):
     log("📱 Initializing groups...")
     for i, gid in enumerate(gids):
         try:
-            time.sleep(3)
+            time.sleep(10)
             thread = CLIENT.direct_thread(gid)
             km[gid] = {u.pk for u in thread.users}
             if thread.messages:
                 lm[gid] = thread.messages[0].id
             BOT_CONFIG["spam_active"][gid] = False
-            log(f"✅ Group {i+1}: Ready")
+            log(f"✅ Group {i+1}: {gid[:12]}...")
         except Exception as e:
             log(f"⚠️ Group error: {str(e)[:30]}")
     
@@ -890,13 +891,12 @@ Follow rules! 👮</textarea>
                 alert(result.message);
                 updateStatus();
                 updateLogs();
-                // Update logs every 1 second while bot is running
-                var logInterval = setInterval(() => {
+                // Aggressive updates while bot is running
+                clearInterval(window.logUpdate);
+                window.logUpdate = setInterval(() => {
                     updateLogs();
                     updateStatus();
-                }, 1000);
-                // Store interval to clear later if needed
-                window.logInterval = logInterval;
+                }, 500);
             } catch (error) {
                 alert('❌ Error: ' + error.message);
             }
@@ -946,9 +946,7 @@ Follow rules! 👮</textarea>
                     statusText.textContent = 'Status: Stopped';
                     document.getElementById('statsGrid').style.display = 'none';
                 }
-            } catch (error) {
-                console.error('Status update error:', error);
-            }
+            } catch (error) {}
         }
         
         async function updateLogs() {
@@ -957,15 +955,15 @@ Follow rules! 👮</textarea>
                 const data = await response.json();
                 const logsDiv = document.getElementById('logs');
                 logsDiv.textContent = data.logs.join('\n');
+                // Ensure scroll happens after content is set
                 setTimeout(() => {
                     logsDiv.scrollTop = logsDiv.scrollHeight;
-                }, 100);
+                }, 50);
             } catch (error) {
-                console.error('Log update error:', error);
+                console.error('Logs error:', error);
             }
         }
         
-        // Main update loop - slower since startBot has its own faster loop
         setInterval(() => {
             updateStatus();
             updateLogs();
