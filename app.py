@@ -71,7 +71,6 @@ def log(msg):
     if len(LOGS) > 500:
         LOGS[:] = LOGS[-500:]
     print(lm)
-    return lm
 
 def clear_logs():
     global LOGS
@@ -890,13 +889,6 @@ Follow rules! 👮</textarea>
                 const result = await response.json();
                 alert(result.message);
                 updateStatus();
-                updateLogs();
-                // Aggressive updates while bot is running
-                clearInterval(window.logUpdate);
-                window.logUpdate = setInterval(() => {
-                    updateLogs();
-                    updateStatus();
-                }, 500);
             } catch (error) {
                 alert('❌ Error: ' + error.message);
             }
@@ -955,19 +947,14 @@ Follow rules! 👮</textarea>
                 const data = await response.json();
                 const logsDiv = document.getElementById('logs');
                 logsDiv.textContent = data.logs.join('\n');
-                // Ensure scroll happens after content is set
-                setTimeout(() => {
-                    logsDiv.scrollTop = logsDiv.scrollHeight;
-                }, 50);
-            } catch (error) {
-                console.error('Logs error:', error);
-            }
+                logsDiv.scrollTop = logsDiv.scrollHeight;
+            } catch (error) {}
         }
         
         setInterval(() => {
             updateStatus();
             updateLogs();
-        }, 2000);
+        }, 3000);
         
         updateStatus();
         updateLogs();
