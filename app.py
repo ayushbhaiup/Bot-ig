@@ -86,7 +86,7 @@ def create_stable_client():
     cl.set_user_agent(ua)
     return cl
 
-def safe_login(cl, token, max_retries=3):
+def safe_login(cl, token, max_retries=2):
     global LOGIN_SUCCESS, SESSION_TOKEN
     for attempt in range(max_retries):
         try:
@@ -95,10 +95,10 @@ def safe_login(cl, token, max_retries=3):
             account = cl.account_info()
             if account and hasattr(account, 'username') and account.username:
                 username = account.username
-                log(f"✅ Login SUCCESS: @{username}")
+                log(f"✅ LOGIN SUCCESS: @{username}")
                 LOGIN_SUCCESS = True
                 SESSION_TOKEN = token
-                time.sleep(3)
+                time.sleep(1)
                 return True, username
         except Exception as e:
             error_msg = str(e).lower()
@@ -106,14 +106,14 @@ def safe_login(cl, token, max_retries=3):
                 log("❌ Session expired!")
                 return False, None
             elif "rate limit" in error_msg:
-                log("⏳ Rate limited - 60s wait")
-                time.sleep(60)
+                log("⏳ Rate limited - 30s wait")
+                time.sleep(30)
             elif "challenge" in error_msg:
                 log("❌ Challenge required")
-                time.sleep(30)
+                time.sleep(15)
             else:
                 log(f"⚠️ Login error: {str(e)[:50]}")
-                time.sleep(15 * (attempt + 1))
+                time.sleep(5 * (attempt + 1))
     return False, None
 
 def session_health_check():
@@ -358,13 +358,13 @@ def run_bot(session_token, wm, gids, dly, pol, ucn, ecmd, admin_ids):
     log("📱 Initializing groups...")
     for i, gid in enumerate(gids):
         try:
-            time.sleep(10)
+            time.sleep(3)
             thread = CLIENT.direct_thread(gid)
             km[gid] = {u.pk for u in thread.users}
             if thread.messages:
                 lm[gid] = thread.messages[0].id
             BOT_CONFIG["spam_active"][gid] = False
-            log(f"✅ Group {i+1}: {gid[:12]}...")
+            log(f"✅ Group {i+1}: Ready")
         except Exception as e:
             log(f"⚠️ Group error: {str(e)[:30]}")
     
@@ -954,7 +954,7 @@ Follow rules! 👮</textarea>
         setInterval(() => {
             updateStatus();
             updateLogs();
-        }, 3000);
+        }, 1500);
         
         updateStatus();
         updateLogs();
