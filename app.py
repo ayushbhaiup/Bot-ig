@@ -889,6 +889,14 @@ Follow rules! 👮</textarea>
                 const result = await response.json();
                 alert(result.message);
                 updateStatus();
+                updateLogs();
+                // Update logs every 1 second while bot is running
+                var logInterval = setInterval(() => {
+                    updateLogs();
+                    updateStatus();
+                }, 1000);
+                // Store interval to clear later if needed
+                window.logInterval = logInterval;
             } catch (error) {
                 alert('❌ Error: ' + error.message);
             }
@@ -938,7 +946,9 @@ Follow rules! 👮</textarea>
                     statusText.textContent = 'Status: Stopped';
                     document.getElementById('statsGrid').style.display = 'none';
                 }
-            } catch (error) {}
+            } catch (error) {
+                console.error('Status update error:', error);
+            }
         }
         
         async function updateLogs() {
@@ -947,14 +957,19 @@ Follow rules! 👮</textarea>
                 const data = await response.json();
                 const logsDiv = document.getElementById('logs');
                 logsDiv.textContent = data.logs.join('\n');
-                logsDiv.scrollTop = logsDiv.scrollHeight;
-            } catch (error) {}
+                setTimeout(() => {
+                    logsDiv.scrollTop = logsDiv.scrollHeight;
+                }, 100);
+            } catch (error) {
+                console.error('Log update error:', error);
+            }
         }
         
+        // Main update loop - slower since startBot has its own faster loop
         setInterval(() => {
             updateStatus();
             updateLogs();
-        }, 1500);
+        }, 2000);
         
         updateStatus();
         updateLogs();
